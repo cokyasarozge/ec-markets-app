@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, StyleSheet, Text, View } from 'react-native';
+import { Button, Image, StyleSheet, Text, View } from 'react-native';
 import { AdvancedCheckbox } from 'react-native-advanced-checkbox';
 import type { WebView as WebViewType } from 'react-native-webview';
 import { WebView } from 'react-native-webview';
@@ -76,14 +76,7 @@ const chartHtml = (
           },
           tooltip: { enabled: false },
           title: {
-            useHTML: true,
-            text: \`
-              <div style="display: flex; align-items: center;">
-                <img src="https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8ed3d547-94ff-48e1-9f20-8c14a7030a02_2000x2000.jpeg"
-                alt="Logo" style="height: 24px; width: 24px; margin-right: 8px; border-radius: 4px;" />
-                ${title} Market Data
-              </div>
-            \`
+            text: ''
           },
           rangeSelector: { enabled: false },
           navigator: { enabled: false },
@@ -91,7 +84,14 @@ const chartHtml = (
             crosshair: { width: 5, color: 'grey', dashStyle: 'Solid' },
             type: 'datetime',
             lineWidth: 2,
-            dateTimeLabelFormats: { day: '%d/%m/%Y' }
+            dateTimeLabelFormats: { day: '%d/%m/%Y' },
+            events: {
+              afterSetExtremes: function (e) {
+                // When extremes change, check if zoomed or reset
+                const isZoomed = e.min !== e.dataMin || e.max !== e.dataMax;
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'zoomChange', zoomed: isZoomed }));
+              }
+            }
           },
           yAxis: {
             gridLineDashStyle: 'Dash',
@@ -136,6 +136,7 @@ const chartHtml = (
 const Main = () => {
   const dispatch = useAppDispatch();
   const webviewRef = useRef<WebViewType>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   const [seriesVisibility, setSeriesVisibility] = useState<SeriesVisibility>({
     open: true,
@@ -164,6 +165,17 @@ const Main = () => {
     webviewRef.current?.postMessage('resetZoom');
   };
 
+  const handleWebViewMessage = (event: any) => {
+    try {
+      const messageData = JSON.parse(event.nativeEvent.data);
+      if (messageData.type === 'zoomChange') {
+        setIsZoomed(messageData.zoomed);
+      }
+    } catch (e) {
+      // Ignore invalid messages
+    }
+  };
+
   const handleCheckboxChange = (key: keyof SeriesVisibility, value: boolean) => {
     setSeriesVisibility(prev => ({ ...prev, [key]: value }));
   };
@@ -171,6 +183,13 @@ const Main = () => {
   return (
     <View style={styles.container}>
       <View style={{ height: 400, width: '100%' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+        <Image
+          source={{ uri: 'https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8ed3d547-94ff-48e1-9f20-8c14a7030a02_2000x2000.jpeg' }}
+          style={{ width: 24, height: 24, marginRight: 8, borderRadius: 4 }}
+        />
+        <Text style={{ fontSize: 28}}>{title} Market Data</Text>
+      </View>
         {chartHTML ? (
           <WebView
             ref={webviewRef}
@@ -181,6 +200,7 @@ const Main = () => {
             scrollEnabled={false}
             javaScriptEnabled
             domStorageEnabled
+            onMessage={handleWebViewMessage} 
             androidLayerType="hardware"
             injectedJavaScript={`
               const meta = document.createElement('meta');
@@ -208,9 +228,14 @@ const Main = () => {
             style={{ marginBottom: 8 }}
           />
         ))}
-        <View style={styles.resetButtonContainer}>
-          <Button color="white" title="Reset Zoom" onPress={handleResetZoom} />
-        </View>
+<View style={[styles.resetButtonContainer, { backgroundColor: isZoomed ? 'black' : '#9095a1' }]}>
+  <Button
+    color="white"
+    title="Reset Zoom"
+    onPress={handleResetZoom}
+    disabled={!isZoomed} // optionally disable button when not zoomed
+  />
+</View>
       </View>
     </View>
   );
@@ -238,7 +263,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: -30,
-    backgroundColor: 'grey',
     borderRadius: 30,
     padding: 5,
   },
