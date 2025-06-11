@@ -182,11 +182,11 @@ const Main = () => {
 
   return (
     <View style={styles.container}>
-      <View style={{ height: 400, width: '100%' }}>
+      <View style={{ height: 450, width: '100%' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
         <Image
           source={{ uri: 'https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F8ed3d547-94ff-48e1-9f20-8c14a7030a02_2000x2000.jpeg' }}
-          style={{ width: 24, height: 24, marginRight: 8, borderRadius: 4 }}
+          style={{ width: 44, height: 44, marginRight: 8, borderRadius: 4 }}
         />
         <Text style={{ fontSize: 28}}>{title} Market Data</Text>
       </View>
